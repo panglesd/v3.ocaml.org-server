@@ -1,5 +1,6 @@
 # Unreleased
 
+- Add a job board in opportunities (#115, by @tmattio)
 - Add code-highlighting to tutorials (#108, by @patricoferris)
 - Add initial set of Best Known Methods (#107, by @tmattio)
 - Add initial toplevel to homepage (#106, by @tmattio)
