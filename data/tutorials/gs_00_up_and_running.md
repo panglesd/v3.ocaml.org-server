@@ -18,13 +18,45 @@ reading [OCaml on Windows](/docs/ocaml-on-windows) first.
 The following instructions work on Linux, BSD, and macOS. Plus, they also work on Cygwin and
 WSL.
 
-## Installing OCaml
+## Up and Running with the Platform Installer
+
+The platform installer is work in progress. You can follow its development and
+report issues on [the repository](https://github.com/tarides/ocaml-platform-installer/).
+
+In case the installer don't work on your system, follow the [instructions below](#installing-ocaml-without-the-platform-installer).
+
+The installer is not in any package manager yet, but it can be installed using
+this script, which will install both opam and OCaml Platform`:
+
+```shell
+sudo bash < <(curl -sL https://github.com/tarides/ocaml-platform-installer/releases/latest/download/installer.sh)
+```
+
+This downloads a script from the web and executes it as root. You are
+encouraged to have a look at what it does first.
+
+Once this step is done, setup the environment with:
+
+```shell
+ocaml-platform
+```
+
+This will initialise opam and install the development tools, which might take
+some time.
+
+The tools are not installed exactly the same way as with `opam install`. They
+are built in a sandbox so that each tool's dependencies are not installed in
+the same space as your project's dependencies, see [Under the Hood](https://github.com/tarides/ocaml-platform-installer#whats-under-the-hood=)
+for more information.
+
+`ocaml-platform` can be run again at any time to install the tools in another
+opam switch for example.
+
+## Installing OCaml without the Platform Installer
 
 The **platform installer** is currently in active development. It will
-automatically install opam, OCaml, and the development tools. [See below](#up-and-running-with-the-platform-installer)
+automatically install opam, OCaml, and the development tools. [See above](#up-and-running-with-the-platform-installer)
 for the instruction.
-
-Please note that the installer is a work in progress and might not work on your system.
 
 OCaml is available as a package in most Linux distributions; however, it is
 often outdated. On the contrary, OCaml's package manager opam allows you to
@@ -35,8 +67,6 @@ OCaml.
 So the best way to install OCaml is in fact by using opam, OCaml's official package manager.
 
 ### Installing opam
-
-Alternatively, you can use the alpha-version platform installer to install opam and the development tools, [see below](#up-and-running-with-the-platform-installer).
 
 [opam](https://opam.ocaml.org/) is the package manager of OCaml. It introduces the concept of "switches," consisting of a compiler together with a set of packages (libraries and other files). Switches are used to have independent sets of dependencies in different projects.
 
@@ -77,8 +107,6 @@ bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/ocaml/opam/master/she
 
 ### Initialising `opam`
 
-This step is done automatically by the alpha-version platform installer, [see below](#up-and-running-with-the-platform-installer).
-
 If you have installed the binary distribution of `opam` through the install script, this step should already be done. If you have installed it through your system package manager, you must initialise `opam` by running the following command:
 
 ```
@@ -112,9 +140,9 @@ programs:
 
 Although this is theoretically all we need to write OCaml code, it is not at all a complete and comfortable development environment.
 
-## Setting Up Development Tools
+### Setting Up Development Tools
 
-This step is done automatically by the alpha-version platform installer, [see below](#up-and-running-with-the-platform-installer).
+Note: This step is done automatically by the platform installer, [see above](#up-and-running-with-the-platform-installer).
 
 We will now install everything we need to get a complete development environment, which includes:
 
@@ -132,41 +160,6 @@ opam install dune merlin ocaml-lsp-server odoc ocamlformat utop dune-release
 ```
 
 Now that the tools are installed, it remains to understand how to use them. Most of them will be driven either by the editor or by `dune`, but `utop` is handy to try OCaml or a specific library.
-
-## Up and Running with the Platform Installer
-
-The platform installer is work in progress. You can follow its development and
-report issues on [the repository](https://github.com/tarides/ocaml-platform-installer/).
-
-Please note that the installer might not work on your system. If that's the
-case, follow the old instructions above, which are still relevant.
-
-The installer is not in any package manager yet, but it can be installed using
-this script, which will install both opam and OCaml Platform`:
-
-```shell
-sudo bash < <(curl -sL https://github.com/tarides/ocaml-platform-installer/releases/latest/download/installer.sh)
-```
-
-This downloads a script from the web and executes it as root. You are
-encouraged to have a look at what it does first.
-
-Once this step is done, setup the environment with:
-
-```shell
-ocaml-platform
-```
-
-This will initialise opam and install the development tools, which might take
-some time.
-
-The tools are not installed exactly the same way as with `opam install`. They
-are built in a sandbox so that each tool's dependencies are not installed in
-the same space as your project's dependencies, see [Under the Hood](https://github.com/tarides/ocaml-platform-installer#whats-under-the-hood=)
-for more information.
-
-`ocaml-platform` can be run again at any time to install the tools in another
-opam switch for example.
 
 ## Using the OCaml Toplevel with UTop
 
