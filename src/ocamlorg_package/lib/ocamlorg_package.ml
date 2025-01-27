@@ -296,11 +296,10 @@ module Documentation = struct
     | `Assoc
         [
           ("type", `String _page_type);
-          ("title", `String _);
+          (* ("title", `String _); *)
           ("uses_katex", `Bool uses_katex);
           ("breadcrumbs", `List json_breadcrumbs);
           ("toc", `List json_toc);
-          ("global_toc", _);
           ("source_anchor", _);
           ("preamble", `String preamble);
           ("content", `String content);
@@ -317,7 +316,6 @@ module Documentation = struct
         [
           ("type", `String "source");
           ("breadcrumbs", `List json_breadcrumbs);
-          ("global_toc", _);
           ("content", `String content);
         ] ->
           let breadcrumbs = List.map breadcrumb_from_json json_breadcrumbs
@@ -441,7 +439,7 @@ let search_index ~kind t =
   let package_url =
     package_url ~kind (Name.to_string t.name) (Version.to_string t.version)
   in
-  let url = package_url ^ "index.js" in
+  let url = package_url ^ "doc/index.js" in
 
   let open Lwt.Syntax in
   let* content = http_get url in

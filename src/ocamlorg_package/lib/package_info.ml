@@ -88,6 +88,7 @@ let of_library
   { name = l.name; dependencies = l.dependencies; modules }
 
 let of_yojson (v : Yojson.Safe.t) : t =
+  
   let package_info :
       Voodoo_serialize.Package_info.Module.t Voodoo_serialize.Package_info.t =
     Voodoo_serialize.Package_info.of_yojson
