@@ -259,7 +259,11 @@ module Documentation = struct
           Parameter (int_of_string i)
         else raise (Invalid_argument ("kind not recognized: " ^ s))
 
-  type breadcrumb = { name : string; href : string option; kind : breadcrumb_kind }
+  type breadcrumb = {
+    name : string;
+    href : string option;
+    kind : breadcrumb_kind;
+  }
 
   type t = {
     uses_katex : bool;
@@ -284,11 +288,9 @@ module Documentation = struct
           ("name", `String name); ("href", `String href); ("kind", `String kind);
         ] ->
         { name; href = Some href; kind = breadcrumb_kind_from_string kind }
-    | `Assoc
-        [
-          ("name", `String name); ("href", `Null); ("kind", `String kind)
-        ] ->
-        { name; href=None; kind = breadcrumb_kind_from_string kind }
+    | `Assoc [ ("name", `String name); ("href", `Null); ("kind", `String kind) ]
+      ->
+        { name; href = None; kind = breadcrumb_kind_from_string kind }
     | _ -> raise (Invalid_argument "malformed breadcrumb field")
 
   let doc_from_string s =
@@ -304,8 +306,7 @@ module Documentation = struct
           ("preamble", `String preamble);
           ("content", `String content);
         ] ->
-        let breadcrumbs = List.map breadcrumb_from_json json_breadcrumbs
-        in
+        let breadcrumbs = List.map breadcrumb_from_json json_breadcrumbs in
         {
           uses_katex;
           breadcrumbs;
@@ -318,15 +319,8 @@ module Documentation = struct
           ("breadcrumbs", `List json_breadcrumbs);
           ("content", `String content);
         ] ->
-          let breadcrumbs = List.map breadcrumb_from_json json_breadcrumbs
-          in
-          {
-            uses_katex=false;
-            breadcrumbs;
-            toc = [];
-            content;
-          }
-  
+        let breadcrumbs = List.map breadcrumb_from_json json_breadcrumbs in
+        { uses_katex = false; breadcrumbs; toc = []; content }
     | _ -> raise (Invalid_argument "malformed .html.json file")
 end
 
@@ -367,12 +361,21 @@ let http_get url =
           Lwt.return (Error (`Msg (Printexc.to_string e))))
 
 module Sidebar_cache : sig
-  val add : Name.t -> Version.t -> [`Package | `Universe of string] -> Sidebar.t -> unit
+  val add :
+    Name.t ->
+    Version.t ->
+    [ `Package | `Universe of string ] ->
+    Sidebar.t ->
+    unit
 
-  val get : Name.t -> Version.t -> [`Package | `Universe of string] -> Sidebar.t option
+  val get :
+    Name.t ->
+    Version.t ->
+    [ `Package | `Universe of string ] ->
+    Sidebar.t option
 end = struct
   let cache = Hashtbl.create 100
-  
+
   let add name version kind sidebar =
     let name = Name.to_string name in
     let version = Version.to_string version in
@@ -391,18 +394,22 @@ let sidebar ~kind t =
   let open Lwt.Syntax in
   match Sidebar_cache.get t.name t.version kind with
   | Some sidebar -> Lwt.return sidebar
-  | None ->
-    let url = package_url ^ "doc/sidebar.json" in
-    let+ content = http_get url in
-    match content with
-    | Ok v ->
-        let json = Yojson.Safe.from_string v in
-        (match Sidebar.of_yojson json with Ok x ->
-          Sidebar_cache.add t.name t.version kind x; x | Error msg ->
-          Logs.info (fun m -> m "Failed to parse sidebar at %s: %s" url msg); [])
-    | Error _ ->
-        Logs.info (fun m -> m "Failed to fetch module map at %s" url);
-        []
+  | None -> (
+      let url = package_url ^ "doc/sidebar.json" in
+      let+ content = http_get url in
+      match content with
+      | Ok v -> (
+          let json = Yojson.Safe.from_string v in
+          match Sidebar.of_yojson json with
+          | Ok x ->
+              Sidebar_cache.add t.name t.version kind x;
+              x
+          | Error msg ->
+              Logs.info (fun m -> m "Failed to parse sidebar at %s: %s" url msg);
+              [])
+      | Error _ ->
+          Logs.info (fun m -> m "Failed to fetch module map at %s" url);
+          [])
 
 let odoc_page ~url =
   let open Lwt.Syntax in
@@ -492,15 +499,20 @@ let documentation_status ~kind state t : Documentation_status.t option Lwt.t =
     let+ content = http_get (package_url ^ "status.json") in
     let status =
       match content with
-      | Ok s ->
-          (match s |> Yojson.Safe.from_string |> Documentation_status.of_yojson with
+      | Ok s -> (
+          match
+            s |> Yojson.Safe.from_string |> Documentation_status.of_yojson
+          with
           | Ok status ->
-            Logs.info (fun m -> m "Got documentation for package at url %s" package_url);
-            Some status
+              Logs.info (fun m ->
+                  m "Got documentation for package at url %s" package_url);
+              Some status
           | Error e ->
-            Logs.err (fun m -> m "Failed to parse documentation status: %s" e);
-            None)
-      | _ -> None
+              Logs.err (fun m -> m "Failed to parse documentation status: %s" e);
+              None)
+      | _ ->
+          Logs.err (fun m -> m "PROUT");
+          None
     in
     let status_entry =
       { documentation_status = status; time = Unix.gettimeofday () }
