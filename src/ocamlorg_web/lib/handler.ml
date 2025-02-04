@@ -892,22 +892,22 @@ module Package_helper = struct
     let readme_filename =
       Option.fold ~none:None
         ~some:(fun (s : Ocamlorg_package.Documentation_status.t) ->
-          (Ocamlorg_package.Documentation_status.has_readme s))
+          Ocamlorg_package.Documentation_status.has_readme s)
         package_documentation_status
     in
     let changes_filename =
       Option.fold ~none:None
         ~some:(fun (s : Ocamlorg_package.Documentation_status.t) ->
-          (Ocamlorg_package.Documentation_status.has_changelog s))
+          Ocamlorg_package.Documentation_status.has_changelog s)
         package_documentation_status
     in
     let license_filename =
       Option.fold ~none:None
-      ~some:(fun (s : Ocamlorg_package.Documentation_status.t) ->
-        (Ocamlorg_package.Documentation_status.has_license s))
-      package_documentation_status
-
+        ~some:(fun (s : Ocamlorg_package.Documentation_status.t) ->
+          Ocamlorg_package.Documentation_status.has_license s)
+        package_documentation_status
     in
+
     let documentation_status =
       match package_documentation_status with
       | Some _ -> Ocamlorg_frontend.Package.Success
@@ -1243,90 +1243,123 @@ let package_documentation t kind req =
   in
   Logs.info (fun m -> m "package_documentation 1");
 
-  let* docs = Ocamlorg_package.documentation_page ~kind package path in
-  match docs with
-  | None ->
-      let response_404_page =
-        Dream.html ~code:404
-          (Ocamlorg_frontend.package_documentation_not_found ~page:path
-             ~search_index_digest:None
-             ~path:(Ocamlorg_frontend.Package_breadcrumbs.Documentation [])
-             frontend_package)
-      in
-      if version_from_url = "latest" then
-        let* latest_documented_version =
-          Ocamlorg_package.latest_documented_version t name
+  let* package_documentation_status =
+    Ocamlorg_package.documentation_status ~kind:`Package t package
+  in
+  Logs.info (fun m -> m "Trying to find %s" path);
+  let redirect =
+    match package_documentation_status with
+    | None -> None
+    | Some { failed = _; files = _; redirections } ->
+        let assoc =
+          List.map
+            (fun { Ocamlorg_package.Documentation_status.old_path; new_path } ->
+              (old_path, new_path))
+            redirections
         in
-        match latest_documented_version with
-        | None -> response_404_page
-        | Some version ->
-            Dream.redirect req ~code:302
-              (Url.Package.documentation ?hash
-                 ~version:(Ocamlorg_package.Version.to_string version)
-                 ~page:path
-                 (Ocamlorg_package.Name.to_string name))
-      else response_404_page
-  | Some doc ->
-      let map_url = Option.map (fun url ->
-          ("/" ^ url)) in
-      let rec toc_of_sidebar (sidebar: Ocamlorg_package.Sidebar.tree) =
-        Ocamlorg_frontend.Navmap.{
-          title = sidebar.node.content;
-          kind = (match sidebar.node.kind with
-            | Some "module" -> Module
-            | Some "page" -> Page
-            | Some "leaf-page" when String.starts_with ~prefix:"Library " sidebar.node.content-> Library
-            | Some "leaf-page" -> Page
-            | Some "module-type" -> Module_type
-            | Some "parameter" -> Parameter
-            | Some "class" -> Class
-            | Some "class-type" -> Class_type
-            | Some "file" -> File
-            | Some "source" -> Source
-            | None -> Page
-            | _ -> File
-            );
-          href = map_url sidebar.node.url;
-          children = List.map toc_of_sidebar sidebar.children;
-        } in
-      Logs.info (fun m -> m "package_documentation 2");
-
-      let* sidebar = Ocamlorg_package.sidebar ~kind package in
-      Logs.info (fun m -> m "package_documentation 3");
-
-      let* search_index_digest =
-        Package_helper.search_index_digest ~kind t package
+        List.assoc_opt path assoc
+  in
+  match redirect with
+  | Some r ->
+      Logs.info (fun m -> m "original target is %s" (Dream.target req));
+      let url =
+        Ocamlorg.Url.Package.documentation ?hash ~version:version_from_url
+          ~page:r
+          (Ocamlorg_package.Name.to_string name)
       in
-      let toc = Package_helper.frontend_toc doc.toc in
-      let (maptoc : Ocamlorg_frontend.Navmap.toc list) =
-         List.map toc_of_sidebar sidebar
-      in
-      let (breadcrumb_path : Ocamlorg_frontend.Package_breadcrumbs.path) =
-        let breadcrumbs = doc.breadcrumbs in
-        let doc_breadcrumb_to_library_path_item
-            (p : Ocamlorg_package.Documentation.breadcrumb) =
-            let b = { Ocamlorg_frontend.Package_breadcrumbs.name = p.name; href=p.href } in
-            match p.kind with
-            | Module ->
-                Ocamlorg_frontend.Package_breadcrumbs.Module b
-            | ModuleType -> ModuleType b
-            | Parameter i ->
-                Parameter (b,i)
-            | Class -> Class b
-            | ClassType -> ClassType b
-            | Page | LeafPage | File | Source ->
-              Page b
+      Dream.redirect req url
+  | None -> (
+      Logs.info (fun m -> m "Continuing with %s" path);
+      let* docs = Ocamlorg_package.documentation_page ~kind package path in
+      match docs with
+      | None ->
+          let response_404_page =
+            Dream.html ~code:404
+              (Ocamlorg_frontend.package_documentation_not_found ~page:path
+                 ~search_index_digest:None
+                 ~path:(Ocamlorg_frontend.Package_breadcrumbs.Documentation [])
+                 frontend_package)
           in
+          if version_from_url = "latest" then
+            let* latest_documented_version =
+              Ocamlorg_package.latest_documented_version t name
+            in
+            match latest_documented_version with
+            | None -> response_404_page
+            | Some version ->
+                Dream.redirect req ~code:302
+                  (Url.Package.documentation ?hash
+                     ~version:(Ocamlorg_package.Version.to_string version)
+                     ~page:path
+                     (Ocamlorg_package.Name.to_string name))
+          else response_404_page
+      | Some doc ->
+          let map_url = Option.map (fun url -> "/" ^ url) in
+          let rec toc_of_sidebar (sidebar : Ocamlorg_package.Sidebar.tree) =
+            Ocamlorg_frontend.Navmap.
+              {
+                title = sidebar.node.content;
+                kind =
+                  (match sidebar.node.kind with
+                  | Some "module" -> Module
+                  | Some "page" -> Page
+                  | Some "leaf-page"
+                    when String.starts_with ~prefix:"Library "
+                           sidebar.node.content ->
+                      Library
+                  | Some "leaf-page" -> Page
+                  | Some "module-type" -> Module_type
+                  | Some "parameter" -> Parameter
+                  | Some "class" -> Class
+                  | Some "class-type" -> Class_type
+                  | Some "file" -> File
+                  | Some "source" -> Source
+                  | None -> Page
+                  | _ -> File);
+                href = map_url sidebar.node.url;
+                children = List.map toc_of_sidebar sidebar.children;
+              }
+          in
+          Logs.info (fun m -> m "package_documentation 2");
 
-          Ocamlorg_frontend.Package_breadcrumbs.Documentation
-                     (List.map doc_breadcrumb_to_library_path_item breadcrumbs )
-      in
-      Logs.info (fun m -> m "package_documentation end");
+          let* sidebar = Ocamlorg_package.sidebar ~kind package in
+          Logs.info (fun m -> m "package_documentation 3");
 
-      Dream.html
-        (Ocamlorg_frontend.package_documentation ~page:(Some path)
-           ~search_index_digest ~path:breadcrumb_path ~toc ~maptoc
-           ~content:doc.content frontend_package)
+          let* search_index_digest =
+            Package_helper.search_index_digest ~kind t package
+          in
+          let toc = Package_helper.frontend_toc doc.toc in
+          let (maptoc : Ocamlorg_frontend.Navmap.toc list) =
+            List.map toc_of_sidebar sidebar
+          in
+          let (breadcrumb_path : Ocamlorg_frontend.Package_breadcrumbs.path) =
+            let breadcrumbs = doc.breadcrumbs in
+            let doc_breadcrumb_to_library_path_item
+                (p : Ocamlorg_package.Documentation.breadcrumb) =
+              let b =
+                {
+                  Ocamlorg_frontend.Package_breadcrumbs.name = p.name;
+                  href = p.href;
+                }
+              in
+              match p.kind with
+              | Module -> Ocamlorg_frontend.Package_breadcrumbs.Module b
+              | ModuleType -> ModuleType b
+              | Parameter i -> Parameter (b, i)
+              | Class -> Class b
+              | ClassType -> ClassType b
+              | Page | LeafPage | File | Source -> Page b
+            in
+
+            Ocamlorg_frontend.Package_breadcrumbs.Documentation
+              (List.map doc_breadcrumb_to_library_path_item breadcrumbs)
+          in
+          Logs.info (fun m -> m "package_documentation end");
+
+          Dream.html
+            (Ocamlorg_frontend.package_documentation ~page:(Some path)
+               ~search_index_digest ~path:breadcrumb_path ~toc ~maptoc
+               ~content:doc.content frontend_package))
 
 let package_file t kind req =
   let</>? name =
