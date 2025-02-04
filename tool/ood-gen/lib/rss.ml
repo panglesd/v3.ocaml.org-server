@@ -1,9 +1,9 @@
 let create_entries ~create_entry ?days u =
   let is_fresh =
-    let some days (entry : Syndic.Atom.entry) =
-      let now = Ptime.of_float_s (Unix.gettimeofday ()) |> Option.get in
-      let than = Ptime.sub_span now (Ptime.Span.v (days, 0L)) |> Option.get in
-      if Ptime.is_later entry.updated ~than then Some entry else None
+    let some _days (entry : Syndic.Atom.entry) =
+      (* let now = Ptime.of_float_s (Unix.gettimeofday ()) |> Option.get in *)
+      (* let than = Ptime.sub_span now (Ptime.Span.v (days, 0L)) |> Option.get in *)
+      (* if Ptime.is_later entry.updated ~than then *) Some entry (* else None *)
     in
     Option.fold ~none:Option.some ~some days
   in
