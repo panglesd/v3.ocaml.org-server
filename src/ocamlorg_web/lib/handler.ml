@@ -1244,7 +1244,7 @@ let package_documentation t kind req =
   Logs.info (fun m -> m "package_documentation 1");
 
   let* package_documentation_status =
-    Ocamlorg_package.documentation_status ~kind:`Package t package
+    Ocamlorg_package.documentation_status ~kind t package
   in
   Logs.info (fun m -> m "Trying to find %s" path);
   let redirect =
